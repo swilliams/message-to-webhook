@@ -1,6 +1,7 @@
 import { InteractionResponseFlags, InteractionResponseType, InteractionType, verifyKey } from 'discord-interactions';
 
 import { AutoRouter } from 'itty-router';
+import { WEBHOOK_COMMAND } from './commands';
 
 class JsonResponse extends Response {
 	constructor(body, init) {
@@ -35,6 +36,16 @@ function buildResponseBody(messageContent) {
 	};
 }
 
+async function sendPostToWebhook(webhookURL, postBody) {
+	return await fetch(webhookURL, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify(postBody),
+	});
+}
+
 const router = AutoRouter();
 
 /**
@@ -44,26 +55,19 @@ router.get('/', (request, env) => {
 	return new Response(`👋 ${env.DISCORD_APPLICATION_ID}`);
 });
 
-const WEBHOOK_COMMAND = {
-	name: 'message-to-webhook',
-	description: 'Send a message to a webhook',
-};
-
 /**
  * Main route for all requests sent from Discord.  All incoming messages will
  * include a JSON payload described here:
  * https://discord.com/developers/docs/interactions/receiving-and-responding#interaction-object
  */
 router.post('/', async (request, env) => {
-	const { isValid, interaction } = await server.verifyDiscordRequest(request, env);
+	const body = await server.verifyDiscordRequest(request, env);
+	const { isValid, interaction } = body;
 	if (!isValid || !interaction) {
 		return new Response('Bad request signature.', { status: 401 });
 	}
 
-    console.log('is valid');
-
 	if (interaction.type === InteractionType.PING) {
-        console.log('got ping');
 		// The `PING` message is used during the initial webhook handshake, and is
 		// required to configure the webhook in the developer portal.
 		return new JsonResponse({
@@ -72,23 +76,19 @@ router.post('/', async (request, env) => {
 	}
 
 	if (interaction.type === InteractionType.APPLICATION_COMMAND) {
-        console.log('app command', interaction.data.name);
 		switch (interaction.data.name.toLowerCase()) {
-			case WEBHOOK_COMMAND.name.toLowerCase():
-				{
-                const messageData = request.body.data;
+			case WEBHOOK_COMMAND.name.toLowerCase(): {
 				let message = {};
 				try {
-					message = getFirstMessageOrError(messageData);
+					message = getFirstMessageOrError(interaction.data);
 				} catch (e) {
 					console.error(e);
 					return new JsonResponse({ error: 'Could not find message' }, { status: 400 });
 				}
-
-				const webhookURL = process.env.WEBHOOK_URL;
+				const webhookURL = env.WEBHOOK_URL;
 				const postBody = {
 					messageContent: message.content,
-					messageURL: `https://discord.com/channels/${request.body.guild_id}/${message.channel_id}/${message.id}`,
+					messageURL: `https://discord.com/channels/${interaction.guild_id}/${message.channel_id}/${message.id}`,
 					author: message.author.username,
 					authorGlobalName: message.author.global_name,
 				};
@@ -98,7 +98,7 @@ router.post('/', async (request, env) => {
 				let messageContent = webhookResponse.ok ? '✅ Message sent to webhook.' : 'Error: ' + (await webhookResponse.text());
 
 				return new JsonResponse(buildResponseBody(messageContent));
-            }
+			}
 		}
 	}
 });

@@ -3,11 +3,13 @@
   "version": "0.0.0",
   "type": "module",
   "private": true,
+  "main": "src/index.js",
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev",
     "test": "vitest",
+    "ngrok": "ngrok http 8787",
     "register": "node src/register.js"
   },
   "devDependencies": {

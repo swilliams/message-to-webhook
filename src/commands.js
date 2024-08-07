@@ -1,5 +1,3 @@
-import "dotenv/config";
-
 const MESSAGE_COMMAND_TYPE = 3;
 
 // import { InstallGlobalCommands, MESSAGE_COMMAND_TYPE } from "./utils.js";
