@@ -1,7 +1,8 @@
-import 'dotenv/config';
-
 import { WEBHOOK_COMMAND } from './commands.js';
+import dotenv from 'dotenv';
 import process from 'node:process';
+
+dotenv.config({ path: '.dev.vars' });
 
 /**
  * This file is meant to be run from the command line, and is not used by the
